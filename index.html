@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>desapega.rio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --verde-escuro: #2f4a3a;
+    --verde-medio: #5c7d66;
+    --sage: #dfe8dc;
+    --sage-claro: #f1f5ef;
+    --dourado: #b8913b;
+    --texto: #23302a;
+    --erro: #a43a2f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--texto);
+    background: linear-gradient(180deg, var(--sage) 0%, var(--sage-claro) 60%);
+    min-height: 100vh;
+  }
+  h1, h2, h3 { font-family: 'Playfair Display', Georgia, serif; color: var(--verde-escuro); margin: 0 0 .4em; }
+  header {
+    background: var(--verde-escuro);
+    color: #fff;
+    border-bottom: 4px double var(--dourado);
+    padding: 14px 20px;
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+  }
+  .logo { font-family: 'Playfair Display', Georgia, serif; font-size: 28px; color: #f3e3b5; cursor: pointer; }
+  nav { display: flex; flex-wrap: wrap; gap: 8px; }
+  nav button { background: transparent; color: #fff; border: 2px solid transparent; }
+  nav button.ativo, nav button:hover { border-color: var(--dourado); }
+  main { max-width: 1050px; margin: 0 auto; padding: 24px 18px 80px; }
+  button, .botao {
+    font: inherit; font-weight: 700;
+    padding: 12px 20px; border-radius: 10px; border: 2px solid var(--verde-escuro);
+    background: var(--verde-escuro); color: #fff; cursor: pointer;
+  }
+  button.claro { background: #fff; color: var(--verde-escuro); }
+  button.perigo { background: #fff; color: var(--erro); border-color: var(--erro); }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  input, select, textarea {
+    font: inherit; width: 100%; padding: 12px 14px; border-radius: 10px;
+    border: 2px solid #b9c7b8; background: #fff; color: var(--texto);
+  }
+  input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px solid var(--dourado); outline-offset: 1px; }
+  label { display: block; font-weight: 700; margin: 16px 0 6px; }
+  .painel {
+    background: #fff; border: 2px solid var(--dourado); border-radius: 16px;
+    padding: 22px; box-shadow: 0 0 0 5px #fff, 0 0 0 7px #e5d3a1;
+    margin-top: 8px;
+  }
+  .filtros { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin: 14px 0 22px; }
+  .grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
+  .cartao {
+    background: #fff; border-radius: 14px; overflow: hidden; cursor: pointer;
+    border: 2px solid #cdd9cb; transition: transform .12s, border-color .12s;
+  }
+  .cartao:hover { transform: translateY(-3px); border-color: var(--dourado); }
+  .foto { width: 100%; aspect-ratio: 1; object-fit: cover; background: var(--sage); display: block; }
+  .sem-foto { display: grid; place-items: center; color: var(--verde-medio); font-size: 15px; }
+  .cartao .info { padding: 12px 14px 16px; }
+  .cartao h3 { font-size: 20px; margin-bottom: 4px; }
+  .preco { font-weight: 700; color: var(--verde-escuro); font-size: 22px; }
+  .miudo { color: #5a6b61; font-size: 16px; }
+  .selo { display: inline-block; background: var(--sage); border-radius: 999px; padding: 2px 12px; font-size: 15px; margin-right: 6px; }
+  .vazio { text-align: center; padding: 40px 10px; color: #5a6b61; }
+  .abas { display: flex; gap: 8px; margin-bottom: 8px; }
+  .abas button { flex: 1; background: #fff; color: var(--verde-escuro); }
+  .abas button.ativo { background: var(--verde-escuro); color: #fff; }
+  .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .previas { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+  .previas img { width: 96px; height: 96px; object-fit: cover; border-radius: 10px; border: 2px solid var(--dourado); }
+  .modal-fundo {
+    position: fixed; inset: 0; background: rgba(35,48,42,.6); display: grid; place-items: center;
+    padding: 16px; z-index: 10; overflow-y: auto;
+  }
+  .modal { background: #fff; border-radius: 16px; max-width: 640px; width: 100%; padding: 22px; border: 3px double var(--dourado); max-height: 94vh; overflow-y: auto; }
+  .galeria { display: flex; gap: 10px; overflow-x: auto; margin: 12px 0; }
+  .galeria img { height: 260px; border-radius: 10px; }
+  .linha-meu { display: flex; gap: 14px; align-items: center; background: #fff; border: 2px solid #cdd9cb; border-radius: 14px; padding: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .linha-meu img, .linha-meu .sem-foto { width: 84px; height: 84px; border-radius: 10px; object-fit: cover; background: var(--sage); }
+  .linha-meu .texto { flex: 1; min-width: 180px; }
+  .acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+  .acoes button { padding: 8px 14px; font-size: 16px; }
+  #aviso {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    background: var(--verde-escuro); color: #fff; padding: 14px 22px; border-radius: 12px;
+    border: 2px solid var(--dourado); z-index: 20; max-width: 92vw; display: none;
+  }
+  #aviso.erro { background: var(--erro); }
+  .oculto { display: none !important; }
+  @media (max-width: 640px) {
+    .filtros, .duas { grid-template-columns: 1fr; }
+    body { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo" id="logo">desapega.rio</div>
+  <nav id="menu"></nav>
+</header>
+<main id="tela"></main>
+<div id="aviso" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://wyvttbchhvsmfyxkzgcw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_hfdWHU1WsHgy7r6DTKGjJg_5g0KRnKD';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const BAIRROS = ['Barra da Tijuca','Recreio dos Bandeirantes','Jacarepaguá','Freguesia','Taquara','Tijuca','Méier','Copacabana','Ipanema','Leblon','Botafogo','Flamengo','Laranjeiras','Centro','Lapa','Santa Teresa','São Conrado','Vila Isabel','Grajaú','Madureira','Campo Grande','Ilha do Governador','Niterói (consulte)'];
+const CATEGORIAS = { roupas: 'Roupas', sapatos: 'Sapatos', bolsas: 'Bolsas e acessórios', casa: 'Casa e decoração', outros: 'Outros' };
+const ESTADOS = { novo: 'Novo, com etiqueta', otimo: 'Ótimo estado', bom: 'Bom estado', com_marcas_de_uso: 'Com marcas de uso' };
+const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+let usuario = null;
+let perfil = null;
+let telaAtual = 'vitrine';
+
+const $ = (sel) => document.querySelector(sel);
+function esc(t) {
+  return String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function aviso(msg, erro = false) {
+  const el = $('#aviso');
+  el.textContent = msg;
+  el.className = erro ? 'erro' : '';
+  el.style.display = 'block';
+  clearTimeout(aviso.t);
+  aviso.t = setTimeout(() => { el.style.display = 'none'; }, 4500);
+}
+
+/* ---------- menu ---------- */
+function desenharMenu() {
+  const m = $('#menu');
+  const itens = [['vitrine', 'Vitrine'], ['anunciar', 'Anunciar'], ['meus', 'Meus anúncios']];
+  m.innerHTML = itens.map(([id, nome]) =>
+    `<button data-tela="${id}" class="${telaAtual === id ? 'ativo' : ''}">${nome}</button>`).join('') +
+    (usuario
+      ? `<button id="sair">Sair</button>`
+      : `<button data-tela="entrar" class="${telaAtual === 'entrar' ? 'ativo' : ''}">Entrar</button>`);
+  m.querySelectorAll('[data-tela]').forEach(b => b.onclick = () => ir(b.dataset.tela));
+  const sair = $('#sair');
+  if (sair) sair.onclick = async () => { await sb.auth.signOut(); aviso('Você saiu. Até a próxima!'); ir('vitrine'); };
+}
+
+function ir(tela) {
+  if ((tela === 'anunciar' || tela === 'meus') && !usuario) {
+    aviso('Para isso, entre na sua conta primeiro.', true);
+    tela = 'entrar';
+  }
+  telaAtual = tela;
+  desenharMenu();
+  ({ vitrine: telaVitrine, anunciar: telaAnunciar, meus: telaMeus, entrar: telaEntrar })[tela]();
+  window.scrollTo(0, 0);
+}
+
+/* ---------- entrar / criar conta ---------- */
+function telaEntrar() {
+  let modo = 'entrar';
+  const t = $('#tela');
+  function desenhar() {
+    t.innerHTML = `
+      <div class="painel" style="max-width:520px;margin:20px auto">
+        <h2>${modo === 'entrar' ? 'Que bom te ver por aqui' : 'Vamos criar a sua conta'}</h2>
+        <div class="abas">
+          <button class="${modo === 'entrar' ? 'ativo' : ''}" data-modo="entrar">Entrar</button>
+          <button class="${modo === 'criar' ? 'ativo' : ''}" data-modo="criar">Criar conta</button>
+        </div>
+        <form id="form-auth">
+          ${modo === 'criar' ? `<label for="nome">Como você quer ser chamada?</label><input id="nome" required maxlength="60" autocomplete="name">` : ''}
+          <label for="email">E-mail</label>
+          <input id="email" type="email" required autocomplete="email">
+          <label for="senha">Senha (mínimo 6 caracteres)</label>
+          <input id="senha" type="password" required minlength="6" autocomplete="${modo === 'entrar' ? 'current-password' : 'new-password'}">
+          <p style="margin-top:20px"><button type="submit" id="enviar">${modo === 'entrar' ? 'Entrar' : 'Criar minha conta'}</button></p>
+        </form>
+      </div>`;
+    t.querySelectorAll('[data-modo]').forEach(b => b.onclick = () => { modo = b.dataset.modo; desenhar(); });
+    $('#form-auth').onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = $('#enviar'); btn.disabled = true;
+      const email = $('#email').value.trim(); const senha = $('#senha').value;
+      try {
+        if (modo === 'entrar') {
+          const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+          if (error) throw error;
+          aviso('Bem-vinda de volta!');
+          ir('vitrine');
+        } else {
+          const nome = $('#nome').value.trim();
+          const { data, error } = await sb.auth.signUp({ email, password: senha, options: { data: { nome } } });
+          if (error) throw error;
+          if (data.session) { aviso('Conta criada. Já pode anunciar!'); ir('vitrine'); }
+          else { aviso('Conta criada! Confirme o e-mail que acabamos de enviar para poder entrar.'); modo = 'entrar'; desenhar(); }
+        }
+      } catch (err) {
+        aviso(traduzirErro(err), true);
+        btn.disabled = false;
+      }
+    };
+  }
+  desenhar();
+}
+function traduzirErro(err) {
+  const m = (err && err.message) || '';
+  if (/Invalid login/i.test(m)) return 'E-mail ou senha não conferem. Tente de novo com calma.';
+  if (/already registered/i.test(m)) return 'Esse e-mail já tem conta. Use a aba Entrar.';
+  if (/Email not confirmed/i.test(m)) return 'Falta confirmar o e-mail. Procure a nossa mensagem na caixa de entrada ou no spam.';
+  if (/rate limit/i.test(m)) return 'Muitas tentativas seguidas. Espere um pouquinho e tente outra vez.';
+  return 'Algo não saiu como esperado: ' + m;
+}
+
+/* ---------- vitrine ---------- */
+async function telaVitrine() {
+  const t = $('#tela');
+  t.innerHTML = `
+    <h1>Peças que merecem uma segunda vida</h1>
+    <p class="miudo">Gostou de algo? Faça a sua oferta. Quem anunciou decide se aceita.</p>
+    <div class="filtros">
+      <input id="busca" type="search" placeholder="Buscar por nome da peça" aria-label="Buscar">
+      <select id="f-cat" aria-label="Categoria"><option value="">Todas as categorias</option>${Object.entries(CATEGORIAS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
+      <select id="f-bairro" aria-label="Bairro"><option value="">Todos os bairros</option>${BAIRROS.map(b => `<option>${esc(b)}</option>`).join('')}</select>
+    </div>
+    <div id="grade" class="grade"></div>`;
+  const carregar = async () => {
+    let q = sb.from('anuncios').select('*, perfis(nome)').eq('status', 'ativo').order('criado_em', { ascending: false }).limit(60);
+    const busca = $('#busca').value.trim(); const cat = $('#f-cat').value; const bairro = $('#f-bairro').value;
+    if (busca) q = q.ilike('titulo', `%${busca.replace(/[%_]/g, '')}%`);
+    if (cat) q = q.eq('categoria', cat);
+    if (bairro) q = q.eq('bairro', bairro);
+    const { data, error } = await q;
+    const g = $('#grade');
+    if (error) { g.innerHTML = `<p class="vazio">Não consegui carregar os anúncios agora. Tente recarregar a página.</p>`; return; }
+    if (!data.length) { g.innerHTML = `<p class="vazio" style="grid-column:1/-1">Nada por aqui ainda. Que tal ser a primeira a anunciar?</p>`; return; }
+    g.innerHTML = data.map(cartao).join('');
+    g.querySelectorAll('.cartao').forEach((el, i) => el.onclick = () => abrirDetalhe(data[i]));
+  };
+  let espera;
+  $('#busca').oninput = () => { clearTimeout(espera); espera = setTimeout(carregar, 300); };
+  $('#f-cat').onchange = carregar; $('#f-bairro').onchange = carregar;
+  carregar();
+}
+function imgOuVazio(a, classe = 'foto') {
+  return a.fotos && a.fotos[0]
+    ? `<img class="${classe}" src="${esc(a.fotos[0])}" alt="${esc(a.titulo)}" loading="lazy">`
+    : `<div class="${classe} sem-foto">sem foto</div>`;
+}
+function cartao(a) {
+  return `<article class="cartao" tabindex="0">
+    ${imgOuVazio(a)}
+    <div class="info">
+      <h3>${esc(a.titulo)}</h3>
+      <div class="preco">${brl.format(a.preco_referencia)}</div>
+      <div class="miudo">${esc(a.bairro)}${a.tamanho ? ' · tam. ' + esc(a.tamanho) : ''}</div>
+      <div style="margin-top:6px"><span class="selo">${esc(ESTADOS[a.estado] || a.estado)}</span></div>
+    </div>
+  </article>`;
+}
+function abrirDetalhe(a) {
+  const fundo = document.createElement('div');
+  fundo.className = 'modal-fundo';
+  fundo.innerHTML = `<div class="modal" role="dialog" aria-modal="true">
+    <h2>${esc(a.titulo)}</h2>
+    <div class="galeria">${(a.fotos || []).map(f => `<img src="${esc(f)}" alt="">`).join('') || '<p class="miudo">Esta peça ainda não tem fotos.</p>'}</div>
+    <p class="preco">Preço de referência: ${brl.format(a.preco_referencia)}</p>
+    <p><span class="selo">${esc(CATEGORIAS[a.categoria] || a.categoria)}</span><span class="selo">${esc(ESTADOS[a.estado] || a.estado)}</span>${a.tamanho ? `<span class="selo">Tam. ${esc(a.tamanho)}</span>` : ''}</p>
+    <p>${esc(a.descricao) || '<span class="miudo">Sem descrição.</span>'}</p>
+    <p class="miudo">Anunciada por ${esc(a.perfis?.nome || 'uma vizinha')} em ${esc(a.bairro)}. A entrega (Correios ou Uber) é escolhida e paga por quem compra.</p>
+    <div class="acoes" style="margin-top:14px">
+      <button disabled title="Chega no próximo passo">Fazer oferta (em breve)</button>
+      <button class="claro" id="fechar">Fechar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(fundo);
+  const fechar = () => fundo.remove();
+  fundo.querySelector('#fechar').onclick = fechar;
+  fundo.onclick = (e) => { if (e.target === fundo) fechar(); };
+}
+
+/* ---------- anunciar ---------- */
+function telaAnunciar() {
+  const t = $('#tela');
+  let arquivos = [];
+  t.innerHTML = `
+    <h1>Anunciar uma peça</h1>
+    <p class="miudo">Fotos boas, luz natural e uma descrição sincera fazem a oferta chegar mais rápido.</p>
+    <div class="painel">
+      <form id="form-anuncio">
+        <label for="titulo">O que você está desapegando?</label>
+        <input id="titulo" required minlength="3" maxlength="80" placeholder="Ex.: Vestido midi verde, tamanho M">
+        <div class="duas">
+          <div><label for="categoria">Categoria</label><select id="categoria">${Object.entries(CATEGORIAS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+          <div><label for="tamanho">Tamanho (se tiver)</label><input id="tamanho" maxlength="12" placeholder="P, M, 38, único"></div>
+        </div>
+        <div class="duas">
+          <div><label for="estado">Estado da peça</label><select id="estado">${Object.entries(ESTADOS).map(([k, v]) => `<option value="${k}" ${k === 'bom' ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+          <div><label for="bairro">Bairro</label><input id="bairro" required list="lista-bairros" placeholder="Onde a peça está"><datalist id="lista-bairros">${BAIRROS.map(b => `<option value="${esc(b)}">`).join('')}</datalist></div>
+        </div>
+        <label for="preco">Preço de referência (R$)</label>
+        <input id="preco" type="number" min="1" step="0.01" required placeholder="Quanto você gostaria de receber">
+        <label for="descricao">Descrição</label>
+        <textarea id="descricao" rows="4" maxlength="800" placeholder="Marca, medidas, defeitos se houver, uso, história da peça..."></textarea>
+        <label for="fotos">Fotos (até 4)</label>
+        <input id="fotos" type="file" accept="image/*" multiple>
+        <div class="previas" id="previas"></div>
+        <p style="margin-top:22px"><button type="submit" id="publicar">Publicar anúncio</button></p>
+      </form>
+    </div>`;
+  $('#fotos').onchange = (e) => {
+    arquivos = [...e.target.files].slice(0, 4);
+    $('#previas').innerHTML = '';
+    arquivos.forEach(f => {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(f); img.alt = 'prévia';
+      $('#previas').appendChild(img);
+    });
+    if (e.target.files.length > 4) aviso('Pegamos só as 4 primeiras fotos.');
+  };
+  $('#form-anuncio').onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = $('#publicar'); btn.disabled = true; btn.textContent = 'Publicando...';
+    try {
+      const urls = [];
+      for (const f of arquivos) {
+        const blob = await reduzir(f);
+        const caminho = `${usuario.id}/${crypto.randomUUID()}.jpg`;
+        const { error } = await sb.storage.from('fotos').upload(caminho, blob, { contentType: 'image/jpeg' });
+        if (error) throw error;
+        urls.push(sb.storage.from('fotos').getPublicUrl(caminho).data.publicUrl);
+      }
+      const { error } = await sb.from('anuncios').insert({
+        vendedora_id: usuario.id,
+        titulo: $('#titulo').value.trim(),
+        categoria: $('#categoria').value,
+        tamanho: $('#tamanho').value.trim() || null,
+        estado: $('#estado').value,
+        bairro: $('#bairro').value.trim(),
+        preco_referencia: parseFloat($('#preco').value),
+        descricao: $('#descricao').value.trim() || null,
+        fotos: urls
+      });
+      if (error) throw error;
+      aviso('Anúncio publicado! Agora é esperar as ofertas.');
+      ir('meus');
+    } catch (err) {
+      aviso('Não consegui publicar: ' + (err.message || 'erro desconhecido'), true);
+      btn.disabled = false; btn.textContent = 'Publicar anúncio';
+    }
+  };
+}
+async function reduzir(file) {
+  const bmp = await createImageBitmap(file);
+  const escala = Math.min(1, 1200 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * escala); c.height = Math.round(bmp.height * escala);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  return new Promise(r => c.toBlob(r, 'image/jpeg', 0.82));
+}
+
+/* ---------- meus anúncios ---------- */
+async function telaMeus() {
+  const t = $('#tela');
+  t.innerHTML = `<h1>Meus anúncios</h1><div id="lista"><p class="miudo">Carregando...</p></div>`;
+  const { data, error } = await sb.from('anuncios').select('*').eq('vendedora_id', usuario.id).order('criado_em', { ascending: false });
+  const l = $('#lista');
+  if (error) { l.innerHTML = '<p class="vazio">Não consegui carregar agora. Recarregue a página.</p>'; return; }
+  if (!data.length) { l.innerHTML = `<p class="vazio">Você ainda não anunciou nada. O armário agradece quando você começar.</p><p style="text-align:center"><button id="comecar">Anunciar minha primeira peça</button></p>`; $('#comecar').onclick = () => ir('anunciar'); return; }
+  const rotulo = { ativo: 'Ativo', pausado: 'Pausado', vendido: 'Vendido' };
+  l.innerHTML = data.map(a => `
+    <div class="linha-meu" data-id="${a.id}">
+      ${imgOuVazio(a, 'foto-mini')}
+      <div class="texto"><strong>${esc(a.titulo)}</strong><br><span class="miudo">${brl.format(a.preco_referencia)} · ${esc(a.bairro)} · <span class="selo">${rotulo[a.status]}</span></span></div>
+      <div class="acoes">
+        ${a.status === 'ativo' ? `<button class="claro" data-acao="pausado">Pausar</button>` : ''}
+        ${a.status === 'pausado' ? `<button class="claro" data-acao="ativo">Reativar</button>` : ''}
+        ${a.status !== 'vendido' ? `<button class="claro" data-acao="vendido">Marcar como vendido</button>` : ''}
+        <button class="perigo" data-acao="apagar">Apagar</button>
+      </div>
+    </div>`).join('');
+  l.querySelectorAll('.linha-meu').forEach(linha => {
+    linha.querySelectorAll('[data-acao]').forEach(b => b.onclick = async () => {
+      const id = linha.dataset.id; const acao = b.dataset.acao;
+      if (acao === 'apagar') {
+        if (!confirm('Apagar este anúncio de vez?')) return;
+        const { error } = await sb.from('anuncios').delete().eq('id', id);
+        if (error) return aviso('Não consegui apagar: ' + error.message, true);
+        aviso('Anúncio apagado.');
+      } else {
+        const { error } = await sb.from('anuncios').update({ status: acao }).eq('id', id);
+        if (error) return aviso('Não consegui atualizar: ' + error.message, true);
+        aviso('Pronto, atualizado.');
+      }
+      telaMeus();
+    });
+  });
+}
+
+/* ---------- início ---------- */
+$('#logo').onclick = () => ir('vitrine');
+sb.auth.onAuthStateChange((_evento, sessao) => {
+  usuario = sessao?.user || null;
+  desenharMenu();
+});
+(async () => {
+  const { data } = await sb.auth.getSession();
+  usuario = data.session?.user || null;
+  ir('vitrine');
+})();
+</script>
+</body>
+</html>
