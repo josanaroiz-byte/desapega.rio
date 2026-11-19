@@ -97,7 +97,15 @@
     border: 2px solid var(--dourado); z-index: 20; max-width: 92vw; display: none;
   }
   #aviso.erro { background: var(--erro); }
+  a { color: var(--verde-escuro); font-weight: 700; }
   .oculto { display: none !important; }
+  .estrelas { color: var(--dourado); letter-spacing: 2px; font-size: 20px; }
+  .caixa-oferta { background: #fff; border: 2px solid #cdd9cb; border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+  .caixa-oferta .topo { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .caixa-oferta .topo img, .caixa-oferta .topo .sem-foto { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: var(--sage); }
+  .caixa-oferta .topo .texto { flex: 1; min-width: 180px; }
+  .nota-box { background: var(--sage-claro); border-left: 5px solid var(--dourado); border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 17px; }
+  .rodape { max-width: 1050px; margin: 0 auto; padding: 0 18px 40px; color: #5a6b61; font-size: 15px; text-align: center; }
   @media (max-width: 640px) {
     .filtros, .duas { grid-template-columns: 1fr; }
     body { font-size: 18px; }
@@ -110,12 +118,16 @@
   <nav id="menu"></nav>
 </header>
 <main id="tela"></main>
+<footer class="rodape">
+  O desapega.rio apenas aproxima quem vende de quem compra. O pagamento da peça (por Pix) e a entrega são combinados entre as duas, fora do aplicativo. Combine tudo com calma, confira as fotos e nunca pague por links que chegarem de desconhecidos. Algo estranho? Use o botão Denunciar.
+</footer>
 <div id="aviso" role="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = 'https://wyvttbchhvsmfyxkzgcw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_hfdWHU1WsHgy7r6DTKGjJg_5g0KRnKD';
+const RECUPERANDO = location.hash.includes('type=recovery');
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const BAIRROS = ['Barra da Tijuca','Recreio dos Bandeirantes','Jacarepaguá','Freguesia','Taquara','Tijuca','Méier','Copacabana','Ipanema','Leblon','Botafogo','Flamengo','Laranjeiras','Centro','Lapa','Santa Teresa','São Conrado','Vila Isabel','Grajaú','Madureira','Campo Grande','Ilha do Governador','Niterói (consulte)'];
@@ -144,6 +156,7 @@ function aviso(msg, erro = false) {
 function desenharMenu() {
   const m = $('#menu');
   const itens = [['vitrine', 'Vitrine'], ['anunciar', 'Anunciar'], ['meus', 'Meus anúncios']];
+  if (usuario) { itens.push(['ofertas', 'Ofertas']); itens.push(['conta', 'Minha conta']); }
   m.innerHTML = itens.map(([id, nome]) =>
     `<button data-tela="${id}" class="${telaAtual === id ? 'ativo' : ''}">${nome}</button>`).join('') +
     (usuario
@@ -155,43 +168,72 @@ function desenharMenu() {
 }
 
 function ir(tela) {
-  if ((tela === 'anunciar' || tela === 'meus') && !usuario) {
+  if ((tela === 'anunciar' || tela === 'meus' || tela === 'conta' || tela === 'ofertas') && !usuario) {
     aviso('Para isso, entre na sua conta primeiro.', true);
     tela = 'entrar';
   }
   telaAtual = tela;
   desenharMenu();
-  ({ vitrine: telaVitrine, anunciar: telaAnunciar, meus: telaMeus, entrar: telaEntrar })[tela]();
+  ({ vitrine: telaVitrine, anunciar: telaAnunciar, meus: telaMeus, ofertas: telaOfertas, conta: telaConta, entrar: telaEntrar })[tela]();
   window.scrollTo(0, 0);
 }
 
 /* ---------- entrar / criar conta ---------- */
-function telaEntrar() {
-  let modo = 'entrar';
+function telaEntrar(modoInicial = 'entrar') {
+  let modo = modoInicial;
   const t = $('#tela');
   function desenhar() {
+    const titulo = { entrar: 'Que bom te ver por aqui', criar: 'Vamos criar a sua conta', esqueci: 'Vamos recuperar o seu acesso' }[modo];
+    const botao = { entrar: 'Entrar', criar: 'Criar minha conta', esqueci: 'Enviar o link da nova senha' }[modo];
     t.innerHTML = `
       <div class="painel" style="max-width:520px;margin:20px auto">
-        <h2>${modo === 'entrar' ? 'Que bom te ver por aqui' : 'Vamos criar a sua conta'}</h2>
-        <div class="abas">
+        <h2>${titulo}</h2>
+        ${modo !== 'esqueci' ? `<div class="abas">
           <button class="${modo === 'entrar' ? 'ativo' : ''}" data-modo="entrar">Entrar</button>
           <button class="${modo === 'criar' ? 'ativo' : ''}" data-modo="criar">Criar conta</button>
-        </div>
+        </div>` : `<p class="miudo">Digite o e-mail da sua conta e enviaremos um link para você escolher uma senha nova.</p>`}
         <form id="form-auth">
           ${modo === 'criar' ? `<label for="nome">Como você quer ser chamada?</label><input id="nome" required maxlength="60" autocomplete="name">` : ''}
           <label for="email">E-mail</label>
           <input id="email" type="email" required autocomplete="email">
+          ${modo !== 'esqueci' ? `
           <label for="senha">Senha (mínimo 6 caracteres)</label>
           <input id="senha" type="password" required minlength="6" autocomplete="${modo === 'entrar' ? 'current-password' : 'new-password'}">
-          <p style="margin-top:20px"><button type="submit" id="enviar">${modo === 'entrar' ? 'Entrar' : 'Criar minha conta'}</button></p>
+          <label style="font-weight:400;display:flex;gap:10px;align-items:center;margin-top:10px"><input type="checkbox" id="ver" style="width:24px;height:24px"> Mostrar a senha enquanto eu digito</label>` : ''}
+          <p style="margin-top:20px"><button type="submit" id="enviar">${botao}</button></p>
         </form>
+        <p class="miudo" style="margin-top:18px">
+          ${modo === 'entrar' ? `<a href="#" id="l-esqueci">Esqueci minha senha</a><br><a href="#" id="l-reenviar">Não recebi o e-mail de confirmação</a>` : ''}
+          ${modo === 'esqueci' ? `<a href="#" id="l-voltar">Voltar para entrar</a>` : ''}
+        </p>
       </div>`;
     t.querySelectorAll('[data-modo]').forEach(b => b.onclick = () => { modo = b.dataset.modo; desenhar(); });
+    const ver = $('#ver');
+    if (ver) ver.onchange = () => { $('#senha').type = ver.checked ? 'text' : 'password'; };
+    const lEsqueci = $('#l-esqueci'); if (lEsqueci) lEsqueci.onclick = (e) => { e.preventDefault(); modo = 'esqueci'; desenhar(); };
+    const lVoltar = $('#l-voltar'); if (lVoltar) lVoltar.onclick = (e) => { e.preventDefault(); modo = 'entrar'; desenhar(); };
+    const lReenviar = $('#l-reenviar');
+    if (lReenviar) lReenviar.onclick = async (e) => {
+      e.preventDefault();
+      const email = $('#email').value.trim();
+      if (!email) return aviso('Digite o seu e-mail no campo acima e clique de novo.', true);
+      const { error } = await sb.auth.resend({ type: 'signup', email, options: { emailRedirectTo: location.origin } });
+      if (error) return aviso(traduzirErro(error), true);
+      aviso('Reenviamos a confirmação. Olhe a caixa de entrada e o spam.');
+    };
     $('#form-auth').onsubmit = async (e) => {
       e.preventDefault();
       const btn = $('#enviar'); btn.disabled = true;
-      const email = $('#email').value.trim(); const senha = $('#senha').value;
+      const email = $('#email').value.trim();
       try {
+        if (modo === 'esqueci') {
+          const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin });
+          if (error) throw error;
+          aviso('Se esse e-mail tiver conta, o link já está a caminho. Olhe também o spam.');
+          modo = 'entrar'; desenhar();
+          return;
+        }
+        const senha = $('#senha').value;
         if (modo === 'entrar') {
           const { error } = await sb.auth.signInWithPassword({ email, password: senha });
           if (error) throw error;
@@ -199,7 +241,7 @@ function telaEntrar() {
           ir('vitrine');
         } else {
           const nome = $('#nome').value.trim();
-          const { data, error } = await sb.auth.signUp({ email, password: senha, options: { data: { nome } } });
+          const { data, error } = await sb.auth.signUp({ email, password: senha, options: { data: { nome }, emailRedirectTo: location.origin } });
           if (error) throw error;
           if (data.session) { aviso('Conta criada. Já pode anunciar!'); ir('vitrine'); }
           else { aviso('Conta criada! Confirme o e-mail que acabamos de enviar para poder entrar.'); modo = 'entrar'; desenhar(); }
@@ -212,11 +254,79 @@ function telaEntrar() {
   }
   desenhar();
 }
+
+/* ---------- minha conta / nova senha ---------- */
+function telaSenha(titulo, mostrarEmail, alvo) {
+  const t = alvo || $('#tela');
+  t.innerHTML = `
+    <div class="painel" style="max-width:520px;margin:20px auto">
+      <h2>${esc(titulo)}</h2>
+      ${mostrarEmail && usuario ? `<p class="miudo">Conta: ${esc(usuario.email)}</p>` : ''}
+      <form id="form-senha">
+        <label for="nova">Nova senha (mínimo 6 caracteres)</label>
+        <input id="nova" type="password" required minlength="6" autocomplete="new-password">
+        <label for="repete">Repita a nova senha</label>
+        <input id="repete" type="password" required minlength="6" autocomplete="new-password">
+        <label style="font-weight:400;display:flex;gap:10px;align-items:center;margin-top:10px"><input type="checkbox" id="ver" style="width:24px;height:24px"> Mostrar as senhas enquanto eu digito</label>
+        <p style="margin-top:20px"><button type="submit" id="salvar">Salvar nova senha</button></p>
+      </form>
+    </div>`;
+  $('#ver').onchange = (e) => { const tipo = e.target.checked ? 'text' : 'password'; $('#nova').type = tipo; $('#repete').type = tipo; };
+  $('#form-senha').onsubmit = async (e) => {
+    e.preventDefault();
+    const nova = $('#nova').value;
+    if (nova !== $('#repete').value) return aviso('As duas senhas não são iguais. Confira e tente de novo.', true);
+    const btn = $('#salvar'); btn.disabled = true;
+    const { error } = await sb.auth.updateUser({ password: nova });
+    if (error) { aviso(traduzirErro(error), true); btn.disabled = false; return; }
+    aviso('Senha trocada com sucesso!');
+    ir('vitrine');
+  };
+}
+async function telaConta() {
+  const t = $('#tela');
+  const zap = await meuWhats();
+  t.innerHTML = `
+    <div class="painel" style="max-width:520px;margin:20px auto">
+      <h2>Meu WhatsApp</h2>
+      <p class="miudo">É por ele que vocês combinam o Pix e a entrega. Ele só aparece para a outra pessoa depois que uma oferta é aceita, nunca antes.</p>
+      <form id="form-zap">
+        <label for="zap">WhatsApp com DDD</label>
+        <input id="zap" inputmode="tel" required placeholder="(21) 99999-9999" value="${esc(zap ? zap.replace(/^55/, '') : '')}">
+        <p style="margin-top:20px"><button type="submit" id="salvar-zap">Salvar WhatsApp</button></p>
+      </form>
+    </div>
+    <div id="bloco-senha"></div>`;
+  $('#form-zap').onsubmit = async (e) => {
+    e.preventDefault();
+    const num = normalizarZap($('#zap').value);
+    if (!/^[0-9]{12,13}$/.test(num)) return aviso('Confira o número: DDD mais o telefone, por exemplo (21) 99999-9999.', true);
+    const btn = $('#salvar-zap'); btn.disabled = true;
+    const { error } = await sb.from('contatos').upsert({ id: usuario.id, whatsapp: num }, { onConflict: 'id' });
+    btn.disabled = false;
+    if (error) return aviso('Não consegui salvar agora: ' + error.message, true);
+    aviso('WhatsApp salvo. Agora já pode fazer e receber ofertas!');
+  };
+  telaSenha('Trocar a senha', true, $('#bloco-senha'));
+}
+function normalizarZap(s) {
+  let d = String(s || '').replace(/\D/g, '');
+  if (d.length <= 11) d = '55' + d;
+  return d;
+}
+async function meuWhats() {
+  const { data } = await sb.from('contatos').select('whatsapp').eq('id', usuario.id).maybeSingle();
+  return data?.whatsapp || null;
+}
+
 function traduzirErro(err) {
   const m = (err && err.message) || '';
   if (/Invalid login/i.test(m)) return 'E-mail ou senha não conferem. Tente de novo com calma.';
   if (/already registered/i.test(m)) return 'Esse e-mail já tem conta. Use a aba Entrar.';
   if (/Email not confirmed/i.test(m)) return 'Falta confirmar o e-mail. Procure a nossa mensagem na caixa de entrada ou no spam.';
+  if (/same password|different from the old/i.test(m)) return 'A nova senha precisa ser diferente da atual.';
+  if (/at least 6|should be at least/i.test(m)) return 'A senha precisa ter pelo menos 6 caracteres.';
+  if (/expired|invalid.*(token|link)|otp/i.test(m)) return 'Esse link venceu ou já foi usado. Peça um novo e tente com calma.';
   if (/rate limit/i.test(m)) return 'Muitas tentativas seguidas. Espere um pouquinho e tente outra vez.';
   return 'Algo não saiu como esperado: ' + m;
 }
@@ -268,6 +378,7 @@ function cartao(a) {
   </article>`;
 }
 function abrirDetalhe(a) {
+  const minha = !!usuario && usuario.id === a.vendedora_id;
   const fundo = document.createElement('div');
   fundo.className = 'modal-fundo';
   fundo.innerHTML = `<div class="modal" role="dialog" aria-modal="true">
@@ -276,16 +387,23 @@ function abrirDetalhe(a) {
     <p class="preco">Preço de referência: ${brl.format(a.preco_referencia)}</p>
     <p><span class="selo">${esc(CATEGORIAS[a.categoria] || a.categoria)}</span><span class="selo">${esc(ESTADOS[a.estado] || a.estado)}</span>${a.tamanho ? `<span class="selo">Tam. ${esc(a.tamanho)}</span>` : ''}</p>
     <p>${esc(a.descricao) || '<span class="miudo">Sem descrição.</span>'}</p>
-    <p class="miudo">Anunciada por ${esc(a.perfis?.nome || 'uma vizinha')} em ${esc(a.bairro)}. A entrega (Correios ou Uber) é escolhida e paga por quem compra.</p>
+    <p class="miudo">Anunciada por ${esc(a.perfis?.nome || 'uma vizinha')} em ${esc(a.bairro)}. <span id="rep"></span><br>A entrega (Correios ou Uber) é escolhida e paga por quem compra. O Pix da peça é combinado direto entre vocês duas.</p>
     <div class="acoes" style="margin-top:14px">
-      <button disabled title="Chega no próximo passo">Fazer oferta (em breve)</button>
+      ${minha ? `<span class="miudo">Este é o seu anúncio.</span>` : `<button id="ofertar">Fazer oferta</button>`}
       <button class="claro" id="fechar">Fechar</button>
+      ${minha ? '' : `<button class="perigo" id="denunciar">Denunciar</button>`}
     </div>
   </div>`;
   document.body.appendChild(fundo);
   const fechar = () => fundo.remove();
   fundo.querySelector('#fechar').onclick = fechar;
   fundo.onclick = (e) => { if (e.target === fundo) fechar(); };
+  const bo = fundo.querySelector('#ofertar'); if (bo) bo.onclick = () => fazerOferta(a, fechar);
+  const bd = fundo.querySelector('#denunciar'); if (bd) bd.onclick = () => denunciar({ anuncio_id: a.id, denunciada_id: a.vendedora_id });
+  sb.from('reputacao').select('media,total').eq('avaliado_id', a.vendedora_id).maybeSingle().then(({ data }) => {
+    const el = fundo.querySelector('#rep'); if (!el) return;
+    el.innerHTML = data ? `<span class="estrelas">★</span> ${data.media} (${data.total} ${data.total === 1 ? 'avaliação' : 'avaliações'})` : 'Ainda sem avaliações.';
+  });
 }
 
 /* ---------- anunciar ---------- */
@@ -406,16 +524,287 @@ async function telaMeus() {
   });
 }
 
+/* ---------- janelas, oferta, denúncia ---------- */
+function abrirModal(html) {
+  const fundo = document.createElement('div');
+  fundo.className = 'modal-fundo';
+  fundo.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${html}</div>`;
+  document.body.appendChild(fundo);
+  const fechar = () => fundo.remove();
+  fundo.onclick = (e) => { if (e.target === fundo) fechar(); };
+  return { fundo, fechar };
+}
+
+async function fazerOferta(a, fecharDetalhe) {
+  if (!usuario) { aviso('Entre na sua conta para fazer uma oferta.', true); fecharDetalhe(); return ir('entrar'); }
+  if (!(await meuWhats())) {
+    aviso('Antes de ofertar, cadastre o seu WhatsApp em Minha conta. É por ele que vocês combinam o Pix.', true);
+    fecharDetalhe(); return ir('conta');
+  }
+  fecharDetalhe();
+  const { fundo, fechar } = abrirModal(`
+    <h2>Fazer oferta</h2>
+    <p><strong>${esc(a.titulo)}</strong><br><span class="miudo">Preço de referência: ${brl.format(a.preco_referencia)}</span></p>
+    <form id="f-oferta">
+      <label for="valor">Quanto você oferece pela peça (R$)?</label>
+      <input id="valor" type="number" min="1" step="0.01" required inputmode="decimal">
+      <div class="nota-box">A oferta vale por 48 horas. Se ela aceitar, vocês combinam o Pix pelo WhatsApp e você escolhe a entrega (Correios ou Uber, frete por sua conta). Nenhum dinheiro passa pelo aplicativo.</div>
+      <div class="acoes"><button type="submit" id="enviar-oferta">Enviar oferta</button><button type="button" class="claro" id="cancelar-oferta">Voltar</button></div>
+    </form>`);
+  fundo.querySelector('#cancelar-oferta').onclick = fechar;
+  fundo.querySelector('#f-oferta').onsubmit = async (e) => {
+    e.preventDefault();
+    const valor = parseFloat(fundo.querySelector('#valor').value);
+    if (!(valor > 0)) return aviso('Digite um valor maior que zero.', true);
+    const btn = fundo.querySelector('#enviar-oferta'); btn.disabled = true;
+    await sb.rpc('expirar_ofertas');
+    const { error } = await sb.from('ofertas').insert({ anuncio_id: a.id, comprador_id: usuario.id, valor });
+    if (error) {
+      btn.disabled = false;
+      if (error.code === '23505') return aviso('Você já tem uma oferta aberta nessa peça. Veja na aba Ofertas.', true);
+      return aviso('Não consegui enviar a oferta: ' + error.message, true);
+    }
+    fechar();
+    aviso('Oferta enviada! Ela tem 48 horas para responder.');
+    ir('ofertas');
+  };
+}
+
+function denunciar({ anuncio_id = null, denunciada_id = null }) {
+  if (!usuario) return aviso('Entre na sua conta para denunciar.', true);
+  const { fundo, fechar } = abrirModal(`
+    <h2>Denunciar</h2>
+    <p class="miudo">Conte o que aconteceu. Quem recebe a denúncia não vê o seu nome e a equipe do desapega.rio analisa com cuidado.</p>
+    <form id="f-den">
+      <label for="den-motivo">O que houve?</label>
+      <select id="den-motivo">
+        <option value="golpe">Suspeita de golpe</option>
+        <option value="nao_enviou">Paguei e a peça não chegou</option>
+        <option value="produto_falso">Peça falsificada ou diferente do anúncio</option>
+        <option value="conteudo_improprio">Conteúdo impróprio</option>
+        <option value="outro">Outro motivo</option>
+      </select>
+      <label for="den-det">Conte um pouco mais (opcional)</label>
+      <textarea id="den-det" rows="4" maxlength="1000"></textarea>
+      <div class="acoes" style="margin-top:16px"><button type="submit" id="enviar-den" class="perigo">Enviar denúncia</button><button type="button" class="claro" id="cancelar-den">Voltar</button></div>
+    </form>`);
+  fundo.querySelector('#cancelar-den').onclick = fechar;
+  fundo.querySelector('#f-den').onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = fundo.querySelector('#enviar-den'); btn.disabled = true;
+    const { error } = await sb.from('denuncias').insert({
+      denunciante_id: usuario.id, anuncio_id, denunciada_id,
+      motivo: fundo.querySelector('#den-motivo').value,
+      detalhes: fundo.querySelector('#den-det').value.trim() || null
+    });
+    if (error) { btn.disabled = false; return aviso('Não consegui enviar agora: ' + error.message, true); }
+    fechar();
+    aviso('Denúncia recebida. Obrigada por cuidar da comunidade!');
+  };
+}
+
+function avaliar(oferta, avaliadoId, nomeAvaliado, depois) {
+  const { fundo, fechar } = abrirModal(`
+    <h2>Como foi com ${esc(nomeAvaliado)}?</h2>
+    <form id="f-av">
+      <label for="nota">Sua nota</label>
+      <select id="nota">
+        <option value="5">★★★★★  Perfeito</option>
+        <option value="4">★★★★☆  Muito bom</option>
+        <option value="3">★★★☆☆  Mais ou menos</option>
+        <option value="2">★★☆☆☆  Ruim</option>
+        <option value="1">★☆☆☆☆  Péssimo</option>
+      </select>
+      <label for="coment">Quer deixar um comentário? (opcional)</label>
+      <textarea id="coment" rows="3" maxlength="500" placeholder="Foi pontual, a peça era igual às fotos..."></textarea>
+      <div class="acoes" style="margin-top:16px"><button type="submit" id="enviar-av">Enviar avaliação</button><button type="button" class="claro" id="cancelar-av">Agora não</button></div>
+    </form>`);
+  fundo.querySelector('#cancelar-av').onclick = fechar;
+  fundo.querySelector('#f-av').onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = fundo.querySelector('#enviar-av'); btn.disabled = true;
+    const { error } = await sb.from('avaliacoes').insert({
+      oferta_id: oferta.id, avaliador_id: usuario.id, avaliado_id: avaliadoId,
+      nota: parseInt(fundo.querySelector('#nota').value, 10),
+      comentario: fundo.querySelector('#coment').value.trim() || null
+    });
+    if (error) { btn.disabled = false; return aviso(error.code === '23505' ? 'Você já avaliou essa venda.' : 'Não consegui enviar: ' + error.message, true); }
+    fechar(); aviso('Avaliação enviada. Obrigada!'); depois();
+  };
+}
+
+function escolherEntrega(oferta, depois) {
+  const { fundo, fechar } = abrirModal(`
+    <h2>Como a peça chega até você?</h2>
+    <form id="f-ent">
+      <label for="metodo">Entrega por</label>
+      <select id="metodo"><option value="correios">Correios</option><option value="uber">Uber (entrega por aplicativo)</option></select>
+      <label for="cep">CEP</label>
+      <input id="cep" required inputmode="numeric" maxlength="9" placeholder="00000-000">
+      <label for="endereco">Endereço completo para entrega</label>
+      <textarea id="endereco" rows="3" required maxlength="300" placeholder="Rua, número, complemento, bairro"></textarea>
+      <label for="frete">Valor do frete combinado (R$)</label>
+      <input id="frete" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Pode deixar em branco e combinar depois">
+      <div class="nota-box">O frete é por conta de quem compra. Para os Correios, a vendedora costuma informar o valor depois de pesar a embalagem. Para o Uber, simule a corrida no aplicativo e combinem o valor pelo WhatsApp.</div>
+      <div class="acoes"><button type="submit" id="enviar-ent">Salvar entrega</button><button type="button" class="claro" id="cancelar-ent">Voltar</button></div>
+    </form>`);
+  fundo.querySelector('#cancelar-ent').onclick = fechar;
+  fundo.querySelector('#f-ent').onsubmit = async (e) => {
+    e.preventDefault();
+    const cep = fundo.querySelector('#cep').value.replace(/\D/g, '');
+    if (cep.length !== 8) return aviso('O CEP precisa ter 8 números.', true);
+    const f = fundo.querySelector('#frete').value;
+    const btn = fundo.querySelector('#enviar-ent'); btn.disabled = true;
+    const { error } = await sb.from('entregas').insert({
+      oferta_id: oferta.id, metodo: fundo.querySelector('#metodo').value, cep_destino: cep,
+      endereco_entrega: fundo.querySelector('#endereco').value.trim(), valor_frete: f === '' ? null : parseFloat(f)
+    });
+    if (error) { btn.disabled = false; return aviso('Não consegui salvar: ' + error.message, true); }
+    fechar(); aviso('Entrega registrada. Agora é combinar o Pix pelo WhatsApp.'); depois();
+  };
+}
+
+/* ---------- ofertas (recebidas e feitas) ---------- */
+async function telaOfertas() {
+  const t = $('#tela');
+  t.innerHTML = `<h1>Ofertas</h1><div id="ofertas"><p class="miudo">Carregando...</p></div>`;
+  await sb.rpc('expirar_ofertas');
+  const { data: ofs, error } = await sb.from('ofertas').select('*').order('criado_em', { ascending: false });
+  const box = $('#ofertas');
+  if (error) { box.innerHTML = '<p class="vazio">Não consegui carregar agora. Recarregue a página.</p>'; return; }
+  if (!ofs.length) { box.innerHTML = '<p class="vazio">Nenhuma oferta por enquanto. Quando alguém ofertar numa peça sua, ou você ofertar numa peça de outra pessoa, aparece aqui.</p>'; return; }
+
+  const [{ data: ans }, { data: ents }, { data: avs }] = await Promise.all([
+    sb.from('anuncios').select('id,titulo,fotos,vendedora_id,preco_referencia').in('id', [...new Set(ofs.map(o => o.anuncio_id))]),
+    sb.from('entregas').select('*').in('oferta_id', ofs.map(o => o.id)),
+    sb.from('avaliacoes').select('oferta_id').eq('avaliador_id', usuario.id)
+  ]);
+  const mapaAn = Object.fromEntries((ans || []).map(a => [a.id, a]));
+  const mapaEnt = Object.fromEntries((ents || []).map(e => [e.oferta_id, e]));
+  const jaAvaliei = new Set((avs || []).map(a => a.oferta_id));
+  const outraParte = (o) => o.comprador_id === usuario.id ? mapaAn[o.anuncio_id]?.vendedora_id : o.comprador_id;
+  const idsPessoas = [...new Set(ofs.map(outraParte).filter(Boolean))];
+  const [{ data: pessoas }, { data: contatos }] = await Promise.all([
+    sb.from('perfis').select('id,nome').in('id', idsPessoas),
+    sb.from('contatos').select('id,whatsapp').in('id', idsPessoas)
+  ]);
+  const nomes = Object.fromEntries((pessoas || []).map(p => [p.id, p.nome]));
+  const zaps = Object.fromEntries((contatos || []).map(c => [c.id, c.whatsapp]));
+  const ROTULO = { pendente: 'Aguardando resposta', aceita: 'Aceita', recusada: 'Recusada', expirada: 'Venceu', cancelada: 'Cancelada' };
+  const METODO = { correios: 'Correios', uber: 'Uber' };
+  const ENTREGA = { a_combinar: 'A combinar', postado: 'Postado', a_caminho: 'A caminho', entregue: 'Entregue' };
+
+  const cartaoOferta = (o) => {
+    const a = mapaAn[o.anuncio_id] || { titulo: 'Peça', fotos: [] };
+    const souCompradora = o.comprador_id === usuario.id;
+    const outraId = outraParte(o);
+    const nome = nomes[outraId] || (souCompradora ? 'a vendedora' : 'a compradora');
+    const ent = mapaEnt[o.id];
+    const zap = zaps[outraId];
+    const faltam = Math.max(0, Math.round((new Date(o.expira_em) - Date.now()) / 36e5));
+    let corpo = '';
+    if (o.status === 'pendente') {
+      corpo += `<p class="miudo">Vence em cerca de ${faltam} ${faltam === 1 ? 'hora' : 'horas'}.</p>`;
+      corpo += `<div class="acoes">${souCompradora
+        ? `<button class="perigo" data-acao="cancelar">Cancelar minha oferta</button>`
+        : `<button data-acao="aceitar">Aceitar</button><button class="perigo" data-acao="recusar">Recusar</button>`}</div>`;
+    }
+    if (o.status === 'aceita') {
+      const msg = encodeURIComponent(`Olá, ${nome}! Aqui é do desapega.rio, sobre a peça "${a.titulo}" (${brl.format(o.valor)}). Vamos combinar o Pix?`);
+      const link = zap ? `<a href="https://wa.me/${esc(zap)}?text=${msg}" target="_blank" rel="noopener">Chamar ${esc(nome)} no WhatsApp</a>` : `<span class="miudo">${esc(nome)} ainda não cadastrou o WhatsApp. Recarregue a página mais tarde.</span>`;
+      corpo += `<div class="nota-box">${souCompradora
+        ? `Oferta aceita! Combine o Pix com a vendedora e pague só depois de confirmar tudo com ela. ${link}`
+        : `Oferta aceita! Combine o Pix com a compradora. Só envie a peça depois de ver o dinheiro na sua conta, e não envie antes disso, por mais que ela tenha pressa. ${link}`}</div>`;
+      if (!ent) {
+        corpo += souCompradora
+          ? `<div class="acoes"><button data-acao="entrega">Escolher a entrega</button></div>`
+          : `<p class="miudo">Falta a compradora escolher a entrega (Correios ou Uber).</p>`;
+      } else {
+        corpo += `<p class="miudo">Entrega por <strong>${METODO[ent.metodo]}</strong> · ${ENTREGA[ent.status]}${ent.valor_frete != null ? ' · frete ' + brl.format(ent.valor_frete) : ''}<br>
+          Endereço: ${esc(ent.endereco_entrega || '')} (CEP ${esc(ent.cep_destino || '')})
+          ${ent.codigo_rastreio ? `<br>Rastreio: <strong>${esc(ent.codigo_rastreio)}</strong>` : ''}</p>`;
+        const botoes = [];
+        if (!souCompradora && ent.status !== 'entregue') botoes.push(`<button class="claro" data-acao="rastreio">${ent.codigo_rastreio ? 'Atualizar' : 'Informar'} código de rastreio</button>`);
+        if (souCompradora && ent.status !== 'entregue') botoes.push(`<button data-acao="recebi">Recebi a peça</button>`);
+        if (ent.status === 'entregue' && !jaAvaliei.has(o.id)) botoes.push(`<button data-acao="avaliar">Avaliar ${esc(nome)}</button>`);
+        if (ent.status === 'entregue' && jaAvaliei.has(o.id)) botoes.push(`<span class="miudo">Você já avaliou. Obrigada!</span>`);
+        if (botoes.length) corpo += `<div class="acoes">${botoes.join('')}</div>`;
+      }
+      corpo += `<p style="margin:12px 0 0"><button class="perigo" data-acao="denunciar" style="padding:6px 12px;font-size:15px">Algo errado? Denunciar</button></p>`;
+    }
+    return `<div class="caixa-oferta" data-id="${o.id}">
+      <div class="topo">
+        ${imgOuVazio(a, 'foto-mini')}
+        <div class="texto"><strong>${esc(a.titulo)}</strong><br>
+          <span class="miudo">${souCompradora ? 'Sua oferta' : 'Oferta de ' + esc(nome)}: <strong>${brl.format(o.valor)}</strong> · <span class="selo">${ROTULO[o.status]}</span></span></div>
+      </div>${corpo}</div>`;
+  };
+
+  const recebidas = ofs.filter(o => o.comprador_id !== usuario.id);
+  const feitas = ofs.filter(o => o.comprador_id === usuario.id);
+  box.innerHTML =
+    (recebidas.length ? `<h2>Ofertas que recebi</h2>${recebidas.map(cartaoOferta).join('')}` : '') +
+    (feitas.length ? `<h2 style="margin-top:24px">Ofertas que fiz</h2>${feitas.map(cartaoOferta).join('')}` : '');
+
+  box.querySelectorAll('.caixa-oferta').forEach(cx => {
+    const o = ofs.find(x => x.id === cx.dataset.id);
+    const ent = mapaEnt[o.id];
+    const outraId = outraParte(o);
+    const nome = nomes[outraId] || 'essa pessoa';
+    cx.querySelectorAll('[data-acao]').forEach(b => b.onclick = async () => {
+      const acao = b.dataset.acao;
+      const recarregar = () => telaOfertas();
+      if (acao === 'aceitar') {
+        if (!(await meuWhats())) { aviso('Cadastre o seu WhatsApp em Minha conta antes de aceitar. É por ele que vocês combinam o Pix.', true); return ir('conta'); }
+        if (!confirm(`Aceitar a oferta de ${brl.format(o.valor)}? As outras ofertas dessa peça serão recusadas.`)) return;
+        const { error } = await sb.rpc('aceitar_oferta', { p_oferta: o.id });
+        if (error) { aviso(traduzirOferta(error), true); return recarregar(); }
+        aviso('Oferta aceita! Agora chame a compradora no WhatsApp para combinar o Pix.'); recarregar();
+      } else if (acao === 'recusar' || acao === 'cancelar') {
+        if (!confirm(acao === 'recusar' ? 'Recusar essa oferta?' : 'Cancelar a sua oferta?')) return;
+        const { error } = await sb.from('ofertas').update({ status: acao === 'recusar' ? 'recusada' : 'cancelada' }).eq('id', o.id);
+        if (error) return aviso('Não consegui atualizar: ' + error.message, true);
+        aviso('Pronto.'); recarregar();
+      } else if (acao === 'entrega') {
+        escolherEntrega(o, recarregar);
+      } else if (acao === 'recebi') {
+        if (!confirm('Confirma que a peça chegou direitinho?')) return;
+        const { error } = await sb.from('entregas').update({ status: 'entregue' }).eq('id', ent.id);
+        if (error) return aviso('Não consegui atualizar: ' + error.message, true);
+        aviso('Que bom que chegou! Que tal avaliar a vendedora?'); recarregar();
+      } else if (acao === 'rastreio') {
+        const cod = prompt('Código de rastreio (ou o nome do motorista, no caso do Uber):', ent.codigo_rastreio || '');
+        if (cod === null) return;
+        const { error } = await sb.from('entregas').update({ codigo_rastreio: cod.trim() || null }).eq('id', ent.id);
+        if (error) return aviso('Não consegui salvar: ' + error.message, true);
+        aviso('Informação salva.'); recarregar();
+      } else if (acao === 'avaliar') {
+        avaliar(o, outraId, nome, recarregar);
+      } else if (acao === 'denunciar') {
+        denunciar({ anuncio_id: o.anuncio_id, denunciada_id: outraId });
+      }
+    });
+  });
+}
+function traduzirOferta(err) {
+  const m = (err && err.message) || '';
+  if (/indispon/i.test(m)) return 'Essa oferta já foi respondida, venceu ou a peça não está mais ativa.';
+  if (/Só quem anunciou/i.test(m)) return 'Só quem anunciou a peça pode aceitar a oferta.';
+  return 'Não consegui concluir agora: ' + m;
+}
+
 /* ---------- início ---------- */
 $('#logo').onclick = () => ir('vitrine');
-sb.auth.onAuthStateChange((_evento, sessao) => {
+sb.auth.onAuthStateChange((evento, sessao) => {
   usuario = sessao?.user || null;
   desenharMenu();
+  if (evento === 'PASSWORD_RECOVERY') telaSenha('Escolha a sua nova senha', false);
 });
 (async () => {
   const { data } = await sb.auth.getSession();
   usuario = data.session?.user || null;
-  ir('vitrine');
+  if (RECUPERANDO) { usuario ? telaSenha('Escolha a sua nova senha', false) : ir('entrar'); }
+  else ir('vitrine');
 })();
 </script>
 </body>
